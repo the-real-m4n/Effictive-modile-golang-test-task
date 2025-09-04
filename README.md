@@ -53,7 +53,7 @@
 ### 1. Клонирование
 
 ```bash
-git clone https://github.com/username/subscriptions-service.git
+git clone https://github.com/the-real-m4n/Effictive-modile-golang-test-task.git
 cd subscriptions-service
 ```
 
