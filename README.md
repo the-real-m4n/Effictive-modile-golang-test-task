@@ -32,7 +32,7 @@
 
 ```
 .
-├── cmd/app/              # main.go (точка входа)
+├── cmd/              # main.go (точка входа)
 ├── internal/
 │   ├── db/               # подключение к БД
 │   ├── handler/          # HTTP-хендлеры
