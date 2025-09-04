@@ -1,0 +1,30 @@
+
+services:
+  db:
+    image: postgres:15
+    container_name: subscriptions_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: subscriptions
+    ports:
+      - "5433:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  api:
+    build: .
+    container_name: subscriptions_api
+    restart: always
+    depends_on:
+      - db
+    environment:
+      DB_URL: postgres://postgres:postgres@db:5432/subscriptions?sslmode=disable
+    ports:
+      - "8080:8080"
+
+volumes:
+  db_data:
+
+# 172.18.0.2 ip
