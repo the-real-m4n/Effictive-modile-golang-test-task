@@ -14,6 +14,7 @@ import (
 	"subscriptions-service/internal/handler"
 	"subscriptions-service/internal/repository"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
 	swaggerFiles "github.com/swaggo/files"
@@ -35,6 +36,10 @@ func main() {
 	h := handler.NewSubscriprionHandler(repo)
 
 	r := gin.Default()
+
+	//CORS
+	r.Use(cors.Default())
+
 	r.POST("/subscriptions", h.Create)
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -46,8 +51,13 @@ func main() {
 	r.PUT("subscriptions/:id", h.Update)
 
 	r.DELETE("subscriptions/:id", h.Delete)
+	r.GET("subscriptions/monthly-cost", h.GetMonthlyCost)
 
-	r.GET("subscriptions/total", h.GetTotalPrice)
+	// Serve frontend
+	r.Static("/static", "./static/static")
+	r.NoRoute(func(c *gin.Context) {
+		c.File("./static/index.html")
+	})
 
 	log.Println("Server running on :8080")
 	if err := r.Run(":8080"); err != nil {

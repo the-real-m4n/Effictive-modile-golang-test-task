@@ -24,6 +24,9 @@ COPY --from=builder /TestTaskGolang/subscriptions-service .
 # swagger файлы (если нужны в контейнере)
 COPY --from=builder /TestTaskGolang/docs ./docs
 
+# копируем собранный фронтенд
+COPY static ./static
+
 # порт, на котором работает gin
 EXPOSE 8080
 

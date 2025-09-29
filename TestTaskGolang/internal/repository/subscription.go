@@ -122,19 +122,17 @@ func (r *SubscriptionRepo) Delete(ctx context.Context, id int) error {
 
 }
 
-func (r *SubscriptionRepo) GetTotalPrice(ctx context.Context, userID string, serviceName string, from, to time.Time) (int, error) {
+func (r *SubscriptionRepo) GetMonthlyCost(ctx context.Context, userID string, startOfMonth, endOfMonth time.Time) (int, error) {
 	query := `
-        SELECT COALESCE(SUM(price * (DATE_PART('year', age(end_date, start_date)) * 12 +
-                                     DATE_PART('month', age(end_date, start_date)) + 1)), 0)
+        SELECT COALESCE(SUM(price), 0)
         FROM subscriptions
         WHERE user_id = $1
-          AND service_name = $2
-          AND start_date >= $3
-          AND end_date <= $4
+          AND start_date <= $2
+          AND (end_date IS NULL OR end_date >= $3)
     `
 
 	var total int
-	err := r.db.QueryRow(ctx, query, userID, serviceName, from, to).Scan(&total)
+	err := r.db.QueryRow(ctx, query, userID, endOfMonth, startOfMonth).Scan(&total)
 	if err != nil {
 		return 0, err
 	}

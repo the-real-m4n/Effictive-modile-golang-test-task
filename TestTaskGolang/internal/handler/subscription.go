@@ -13,6 +13,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const hardcodedUserID = "60601fee-2bf1-4721-ae6f-7636e79a0cba"
+
 type SubscriptionHandler struct {
 	repo *repository.SubscriptionRepo
 }
@@ -24,7 +26,6 @@ func NewSubscriprionHandler(repo *repository.SubscriptionRepo) *SubscriptionHand
 type createRequest struct {
 	ServiceName string `json:"service_name" binding:"required" example:"Yandex Plus"`
 	Price       int    `json:"price" binding:"required" example:"400"`
-	UserID      string `json:"user_id" binding:"required" example:"60601fee-2bf1-4721-ae6f-7636e79a0cba"`
 	StartDate   string `json:"start_date" binding:"required" example:"2025-07"`
 	EndDate     string `json:"end_date" example:"2025-12"`
 }
@@ -66,7 +67,7 @@ func (h *SubscriptionHandler) Create(c *gin.Context) {
 	sub := models.Subscription{
 		ServiceName: req.ServiceName,
 		Price:       req.Price,
-		UserID:      req.UserID,
+		UserID:      hardcodedUserID,
 		StartDate:   start,
 		EndDate:     end,
 	}
@@ -96,6 +97,10 @@ func (h *SubscriptionHandler) GetAll(c *gin.Context) { // хендлер для 
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Ошибка чтения подписок"})
 		return
 
+	}
+	if subs == nil {
+		c.JSON(http.StatusOK, []models.Subscription{})
+		return
 	}
 	c.JSON(http.StatusOK, subs)
 }
@@ -171,7 +176,7 @@ func (h *SubscriptionHandler) Update(c *gin.Context) {
 		ID:          id,
 		ServiceName: req.ServiceName,
 		Price:       req.Price,
-		UserID:      req.UserID,
+		UserID:      hardcodedUserID,
 		StartDate:   start,
 		EndDate:     end,
 	}
@@ -215,48 +220,39 @@ func (h *SubscriptionHandler) Delete(c *gin.Context) {
 
 }
 
-// GetTotal godoc
-// @Summary Подсчитать сумму подписок
-// @Description Возвращает суммарную стоимость всех подписок за период с фильтрацией
+// GetMonthlyCost godoc
+// @Summary Подсчитать сумму за месяц
+// @Description Возвращает суммарную стоимость всех активных подписок за указанный или текущий месяц.
 // @Tags subscriptions
 // @Produce json
-// @Param user_id query string true "User ID"
-// @Param service_name query string true "Service name"
-// @Param from query string true "Start period (YYYY-MM)"
-// @Param to query string true "End period (YYYY-MM)"
+// @Param month query string false "Месяц для подсчета (формат YYYY-MM)"
 // @Success 200 {object} map[string]int
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
-// @Router /subscriptions/total [get]
-func (h *SubscriptionHandler) GetTotalPrice(c *gin.Context) {
-	userID := c.Query("user_id")
-	serviceName := c.Query("service_name")
-	fromStr := c.Query("from")
-	toStr := c.Query("to")
+// @Router /subscriptions/monthly-cost [get]
+func (h *SubscriptionHandler) GetMonthlyCost(c *gin.Context) {
+	monthStr := c.Query("month")
+	var targetMonth time.Time
+	var err error
 
-	if userID == "" || serviceName == "" || fromStr == "" || toStr == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing required params"})
-		return
+	if monthStr != "" {
+		targetMonth, err = time.Parse("2006-01", monthStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid month format (expected YYYY-MM)"})
+			return
+		}
+	} else {
+		targetMonth = time.Now()
 	}
 
-	from, err := time.Parse("2006-01", fromStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid from format"})
-		return
-	}
+	startOfMonth := time.Date(targetMonth.Year(), targetMonth.Month(), 1, 0, 0, 0, 0, targetMonth.Location())
+	endOfMonth := startOfMonth.AddDate(0, 1, -1)
 
-	to, err := time.Parse("2006-01", toStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid to format"})
-		return
-	}
-
-	total, err := h.repo.GetTotalPrice(c.Request.Context(), userID, serviceName, from, to)
+	total, err := h.repo.GetMonthlyCost(c.Request.Context(), hardcodedUserID, startOfMonth, endOfMonth)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to calculate total"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to calculate monthly cost"})
 		return
 	}
-	log.Printf("Server respons %v", total)
 	c.JSON(http.StatusOK, gin.H{"total": total})
 }
